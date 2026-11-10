@@ -1,0 +1,65 @@
+name: Pusula günlük çalışma
+
+on:
+  schedule:
+    - cron: "40 15 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pusula
+  cancel-in-progress: false
+
+jobs:
+  calistir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.yayin.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ilk kurulum (zip varsa ac)
+        run: |
+          if [ -f pusula-kurulum.zip ]; then
+            unzip -q -o pusula-kurulum.zip -d kurulum_tmp
+            rm -rf kurulum_tmp/pusula-motor/.github
+            cp -a kurulum_tmp/pusula-motor/. .
+            rm -rf kurulum_tmp pusula-kurulum.zip
+            echo "Kurulum dosyalari acildi."
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Paketleri kur
+        run: pip install -r requirements.txt
+
+      - name: Motoru calistir
+        env:
+          PUSULA_SIFRE: ${{ secrets.PUSULA_SIFRE }}
+        run: python yayinla.py
+
+      - name: Kaydet
+        run: |
+          git config user.name "pusula-bot"
+          git config user.email "pusula-bot@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "Gunluk calisma $(date -u +%Y-%m-%d)"
+          git push
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Uygulamayi yayinla
+        id: yayin
+        uses: actions/deploy-pages@v4
