@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+veri_onbellek/
+backtest_sonuc/
+durum_sanal.json
+durum_gercek.json
+sinyaller.json
